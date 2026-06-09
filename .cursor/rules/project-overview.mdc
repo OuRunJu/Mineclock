@@ -1,0 +1,60 @@
+---
+description: Mineclock 项目概览、架构与全局开发约束
+alwaysApply: true
+---
+
+# Mineclock 项目概览
+
+Mineclock 是一个 **Minecraft 风格桌面时钟 Widget** Android 应用。
+
+## 技术栈
+
+- **语言**: Java（无 Kotlin）
+- **构建**: Gradle 单模块（`:app`），AGP 4.0.1
+- **SDK**: `minSdk 26`（Android 8.0+），`compileSdk/targetSdk 29`
+- **依赖**: AndroidX AppCompat、JUnit 4、JetBrains annotations
+- **包名**: `com.example.mineclock`
+
+## 架构模式
+
+项目采用 **接口 + Default 实现 + 构造函数手动注入**，无 DI 框架。
+
+| 接口 | 默认实现 | 职责 |
+|------|----------|------|
+| `Configuration` | `DefaultConfiguration` | 调试开关、帧数、更新间隔等常量 |
+| `WallClock` | `DefaultWallClock` | 提供当前 `LocalTime` |
+| `ClockFactory` | `LocalSystemClockFactory` | 提供 `java.time.Clock` |
+| `UpdateAlarmManager` | `DefaultUpdateAlarmManager` | Widget 定时刷新 Alarm |
+| `Logger` | `DefaultLogger` | 受 `debugEnabled()` 控制的日志 |
+
+## 核心数据流
+
+```
+WallClock.now() → ViewModelAdapter.viewModel() → ViewModel → RemoteViews
+```
+
+- `ViewModel` 是 **不可变数据对象**（非 AndroidX ViewModel）
+- `ClockAppWidgetProvider` 是唯一 Android 入口，在构造函数中组装依赖
+- Widget 刷新：`AlarmManager` + `TIME_SET`/`TIMEZONE_CHANGED` 广播
+
+## 关键常量（DefaultConfiguration）
+
+- `IMAGES_PER_DAY = 64`：一天 64 帧动画
+- `IMAGE_OFFSET = 32`：正午对应帧 0
+- `UPDATE_INTERVAL_MS`：按帧数均分 24 小时
+- `updatePeriodMillis = 0`：系统周期更新关闭，由 Alarm 驱动
+
+## 开发原则
+
+1. **最小改动**：只改与任务直接相关的文件
+2. **保持模式一致**：新能力优先走 Interface → DefaultXxx → 注入
+3. **可测试性**：业务逻辑放 `ViewModelAdapter` 等纯 Java 类；用 Fake 实现（如 `FakeWallClock`）做单元测试
+4. **不引入新框架**：除非明确要求，不添加 Dagger/Hilt/Kotlin/Compose
+5. **测试命令**：`./gradlew test`（单元测试）、`./gradlew connectedAndroidTest`（需设备/模拟器）
+6. **注释语言**：代码注释用英文；与用户沟通可用中文
+
+## 参考文件
+
+- Widget 入口：`app/src/main/java/com/example/mineclock/ClockAppWidgetProvider.java`
+- 帧计算逻辑：`app/src/main/java/com/example/mineclock/ViewModelAdapter.java`
+- 单元测试范例：`app/src/test/java/com/example/mineclock/ViewModelAdapterUnitTest.java`

@@ -1,0 +1,52 @@
+---
+description: Mineclock Java 源码编码规范与模式
+globs: app/src/**/*.java
+alwaysApply: false
+---
+
+# Java 编码规范
+
+## 类设计
+
+- **接口**定义契约；**`final` 类**实现接口，命名 `DefaultXxx`（如 `DefaultWallClock`）
+- 所有源文件放在 `com.example.mineclock` 包下，**不使用子包**
+- 工具类用 `static` 方法（参考 `RemoteViewsExtensions`），非必要不实例化
+
+## 命名
+
+| 类型 | 约定 | 示例 |
+|------|------|------|
+| 接口方法 | 动词/名词，无 `get` 前缀 | `debugEnabled()`, `now()`, `viewModel()` |
+| 数据对象字段 | 通过同名方法访问 | `debugInfo()`, `image()` |
+| 测试方法 | `feature_isCorrect_whenCondition` | `image_isCorrect_whenNoon` |
+| 常量 | `UPPER_SNAKE_CASE` | `ACTION_UPDATE_ALARM_FIRED` |
+
+## 注解
+
+- 非空参数/返回值使用 `@NotNull`（`org.jetbrains.annotations`）
+- 工厂方法可用 `@Contract(" -> new")`
+- `@Override` 方法标记 `final`（与现有代码一致）
+
+## 时间与本地化
+
+- 使用 `java.time` API（`LocalTime`, `Clock`, `ZoneId`），不用 `Calendar`/`Date`
+- `String.format` 使用 `Locale.getDefault()`
+
+## 测试
+
+- 单元测试：`app/src/test/`，JUnit 4
+- Fake/Stub 实现可放在测试文件内（参考 `FakeWallClock`）
+- 新增业务逻辑必须补充对应单元测试
+- 仪器测试：`app/src/androidTest/`，仅用于需 Android Context 的场景
+
+## 禁止事项
+
+- 不要引入 AndroidX `ViewModel`/`LiveData`（项目自有 `ViewModel` 数据类）
+- 不要在 `DefaultConfiguration` 外硬编码魔法数字；配置项走 `Configuration` 接口
+- 不要删除或削弱 ProGuard/R8 配置（release 启用 `minifyEnabled`）
+
+## 格式
+
+- 4 空格缩进
+- `final` 用于方法参数和局部变量（与现有风格一致）
+- import 顺序：Android → 第三方 → `java.*` → static import
