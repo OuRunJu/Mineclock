@@ -1,0 +1,48 @@
+---
+description: Android 资源文件（layout、values、drawable、xml）规范
+globs: app/src/main/res/**
+alwaysApply: false
+---
+
+# Android 资源规范
+
+## 目录结构
+
+```
+res/
+  layout/          # Widget 布局
+  values/          # strings、dimens、colors
+  drawable-nodpi/  # level-list 帧动画（不按密度缩放）
+  mipmap-anydpi-v26/  # 自适应启动图标
+  xml/             # appwidget-provider 元数据
+```
+
+## 命名
+
+- 布局：`clock_widget.xml`
+- ID 前缀：`clock_widget_`（如 `clock_widget_image`）
+- 字符串：`application_*`（应用级）、`clock_widget_*`（Widget 级）
+- 尺寸：`dimens.xml` 中定义（如 `one_cell`）
+
+## XML 格式
+
+- 属性顺序遵循 `.idea/codeStyles/Project.xml` 中 `ANDROID_ATTRIBUTE_ORDER`
+- `xmlns:android` 声明在最前
+- 缩进 4 空格
+
+## 字符串
+
+- 用户可见文本放 `strings.xml`，布局中通过 `@string/...` 引用
+- 调试/无障碍描述也要资源化，不硬编码在 layout
+
+## Drawable
+
+- 时钟帧使用 **level-list** drawable（`clock_widget_image.xml`）
+- 帧资源放 `drawable-nodpi/`，避免密度缩放导致帧错位
+- 新增帧时确保 level 数量与 `Configuration.imagesPerDay()` 逻辑一致
+
+## 注意
+
+- 不添加未使用的资源
+- 修改 `minHeight`/`minWidth` 时同步检查 `dimens.xml`
+- `previewImage` 引用需存在对应 drawable

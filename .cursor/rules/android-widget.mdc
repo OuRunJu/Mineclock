@@ -1,0 +1,63 @@
+---
+description: Android App Widget 开发与 Alarm 调度规范
+globs: app/src/main/java/com/example/mineclock/ClockAppWidgetProvider.java,app/src/main/java/com/example/mineclock/*Alarm*.java,app/src/main/java/com/example/mineclock/RemoteViewsExtensions.java,app/src/main/AndroidManifest.xml,app/src/main/res/xml/clock_widget_provider_info.xml
+alwaysApply: false
+---
+
+# App Widget 开发规范
+
+## 组件职责
+
+- **`ClockAppWidgetProvider`**：唯一 `AppWidgetProvider`，处理生命周期与 UI 更新
+- **`UpdateAlarmManager`**：封装 `AlarmManager.setInexactRepeating` 调度
+- **`RemoteViewsExtensions`**：RemoteViews 反射调用的静态扩展
+
+## Widget 更新流程
+
+每次更新遵循：**cancelPending → update widgets → scheduleNext**
+
+```
+onUpdate / onAppWidgetOptionsChanged / onTimeChanged
+  → cancelPending(context)
+  → updateAppWidget(...) 或 updateAllAppWidgets(...)
+  → scheduleNext(context)
+```
+
+`onUpdateAlarmFired` 只刷新 UI，不重新调度（重复 Alarm 由系统触发）。
+
+## Intent 与 Manifest
+
+- 自定义 Action 定义在接口常量：`UpdateAlarmManager.ACTION_UPDATE_ALARM_FIRED`
+- Manifest 中 `receiver` 需注册三类 `intent-filter`：
+  1. `TIME_SET` / `TIMEZONE_CHANGED`
+  2. `APPWIDGET_*` 系列
+  3. 自定义 `UPDATE_ALARM_FIRED` action
+- `PendingIntent` 使用 `FLAG_CANCEL_CURRENT`，`requestCode = 0`
+
+## RemoteViews 约束
+
+- 布局：`app/src/main/res/layout/clock_widget.xml`
+- 帧动画通过 `setImageLevel` 切换（`drawable-nodpi/clock_widget_image.xml` level-list）
+- 调试文本绑定 `R.id.clock_widget_text`，由 `viewModel.debugInfo()` 驱动
+- 所有 `ImageView` 必须有 `contentDescription`（指向 `strings.xml`）
+
+## Widget Provider 元数据
+
+`clock_widget_provider_info.xml` 关键设置：
+
+- `updatePeriodMillis="0"` — 禁用系统轮询，由 Alarm 控制
+- `resizeMode="horizontal|vertical"`
+- `widgetCategory="home_screen"`
+
+## 新增 Widget 功能检查清单
+
+1. 业务逻辑是否可放入 `ViewModelAdapter`（便于单测）？
+2. 新配置项是否加入 `Configuration` / `DefaultConfiguration`？
+3. 是否需在 `onReceive` 处理新广播？Manifest intent-filter 是否同步？
+4. 布局改动是否更新了 `contentDescription` 和无障碍属性？
+5. Alarm 间隔变更是否重新计算 `UPDATE_INTERVAL_MS` 与帧映射？
+
+## Context 使用
+
+- 持久操作使用 `context.getApplicationContext()`
+- 获取 widget ID：`AppWidgetManager.getInstance(context)` + `ComponentName`
